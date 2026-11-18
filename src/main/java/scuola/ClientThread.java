@@ -9,6 +9,8 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ClientThread extends Thread {
     Socket s;
@@ -17,6 +19,7 @@ public class ClientThread extends Thread {
     File cartella = null;
     File file = null;
     boolean spazio = true;
+    List<String> estensioni = new ArrayList<>();
     public ClientThread(Socket s) {
         this.s = s;
     }
