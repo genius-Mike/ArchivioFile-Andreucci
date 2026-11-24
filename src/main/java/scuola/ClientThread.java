@@ -19,7 +19,11 @@ public class ClientThread extends Thread {
     File cartella = null;
     File file = null;
     boolean spazio = true;
-    List<String> estensioni = new ArrayList<>(List.of("txt", "md", "csv"));
+    String[][] TIPI = {
+    {"txt", "text/plain; charset=utf-8"},
+    {"md",  "text/markdown; charset=utf-8"},
+    {"csv", "text/csv; charset=utf-8"},
+    };
 
     public ClientThread(Socket s) {
         this.s = s;
@@ -29,16 +33,23 @@ public class ClientThread extends Thread {
         try {
             out = new PrintWriter(new OutputStreamWriter(s.getOutputStream(), StandardCharsets.UTF_8), true);
             in = new BufferedReader(new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
-            
+            //spiegazione ARRAYLIST: per evitare di andare a ritoccare i metodi per adeguarli alla nuova struttura di memoria
+            //ho preferito salvare tutti le estensioni disponibili in un array:
+            //in fondo se prima devo fare i controlli sulle estensioni è inutile vado a interrogare la matrice
+            List<String> estensioni = new ArrayList<>();
+
+            //LETTURA INPUT
             String richiesta = in.readLine();
             if (richiesta == null) {
                 return;
             }
+            //CONTROLLO BASE INPUT: VUOTO
             if (richiesta.trim().isEmpty()) {
                 out.println("ERR SYNTAX");
                 return;
             }
 
+            //CONTROLLO BASE INPUT: COMANDO + NUMERO PARTI
             String[] parti = richiesta.trim().split("\\s+");
 
             if (!parti[0].equals("LEGGI")) {
@@ -49,6 +60,8 @@ public class ClientThread extends Thread {
                 out.println("ERR SYNTAX");
                 return;
             }
+
+            //CONTROLLO NOME FILE 
             String nomeFile = parti[1];
             if (nomeFile.startsWith("/") || nomeFile.startsWith("\\")
                     || nomeFile.startsWith("..")) {
@@ -56,16 +69,22 @@ public class ClientThread extends Thread {
                 return;
             }
 
-            String estensione = leggiEstensione(nomeFile);
+            //CONTROLLO ESTENSIONE
+            for (String tmp[] : TIPI) {
+                estensioni.add(tmp[0]);
+            }
+            String estensione = leggiEstensione(nomeFile, estensioni);
             if(estensione.equals(".null")){
                 out.println("ERR SYNTAX");
                 return;
             }
-            if (!estensioni.contains(estensione)) {
-                out.println("ERR NOTFOUND");
-                return;
-            }
+            // if (!estensioni.contains(estensione)) {
+            //     out.println("ERR NOTFOUND");
+            //     return;
+            // }
             System.out.println(nomeFile);
+
+            //STAMPA RISULTATO
             letturaFile(estensione);
 
         } catch (IOException e) {
@@ -91,7 +110,7 @@ public class ClientThread extends Thread {
         return presente;
     }
 
-    public String leggiEstensione(String nomeFile) {
+    public String leggiEstensione(String nomeFile, List<String> estensioni) {
         for (String estensione : estensioni) {
             if (collegamentoCartella(nomeFile, estensione)) {
                 return estensione;
@@ -101,12 +120,12 @@ public class ClientThread extends Thread {
         }
         return ".null";
     }
-
     public void letturaFile(String estensione) {
         try (BufferedReader lettoreFile = new BufferedReader(
                 new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
             out.println("OK FILE");
-            out.println("TYPE " + estensione);
+            String testoDaStampareEstensione = convertiEstensione(estensione);
+            out.println(testoDaStampareEstensione);
             out.println(); // Riga vuota
             spazio = false;
 
@@ -118,7 +137,17 @@ public class ClientThread extends Thread {
             out.println("ERR READ");
         }
     }
-
+    public String convertiEstensione(String estensione){
+        for (String[] tmp : TIPI) {
+            if(estensione.equals(tmp[0])){
+                String testoDaStampareEstensione = "Content-Type: "+ tmp[1];
+                return testoDaStampareEstensione;
+            }else {
+                continue;
+            }
+        }
+        return "ERR TYPE";
+    }
     public void terminaConnessione() {
         try {
             s.close();
