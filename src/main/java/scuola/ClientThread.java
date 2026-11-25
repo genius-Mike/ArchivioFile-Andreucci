@@ -63,8 +63,8 @@ public class ClientThread extends Thread {
 
             //CONTROLLO NOME FILE 
             String nomeFile = parti[1];
-            if (nomeFile.startsWith("/") || nomeFile.startsWith("\\")
-                    || nomeFile.startsWith("..")) {
+            if (nomeFile.contains("/") || nomeFile.contains("\\")
+                    || nomeFile.contains("..")) {
                 out.println("ERR SYNTAX");
                 return;
             }
@@ -78,10 +78,10 @@ public class ClientThread extends Thread {
                 out.println("ERR SYNTAX");
                 return;
             }
-            // if (!estensioni.contains(estensione)) {
-            //     out.println("ERR NOTFOUND");
-            //     return;
-            // }
+            if (estensione.equals(".notfound")) {
+                out.println("ERR NOTFOUND");
+                return;
+            }
             System.out.println(nomeFile);
 
             //STAMPA RISULTATO
@@ -96,36 +96,40 @@ public class ClientThread extends Thread {
             terminaConnessione();
         }
     }
-
-    public boolean collegamentoCartella(String nomeFile, String estensione) {
-        if (estensione.equals(".null")) {
-            return false;
-        }
-        String nomeFileCompleto = nomeFile + "." + estensione;
+    //TROVARE FILE NELLA CARTELLA
+    public boolean collegamentoCartella(String nomeFile) {
         cartella = new File("documenti");
-        file = new File(cartella, nomeFileCompleto);
+        file = new File(cartella, nomeFile);
 
         System.out.println(file.getAbsolutePath()); // Utile durante le prove
         boolean presente = file.isFile();
         return presente;
     }
-
+    //TROVARE ESTENSIONE FILE
+    //CORREZZIONE: nella tappa 2 non avevo notato che seppur funzionasse il ERR SYNTAX 
+    //per input come "LEGGI saluto.txt" non avevo considerato "LEGGI ciccio" --> "ERR SYNTAX"
+    //mentre l'errore corretto è "ERR NOTFOUND", pertanto ho dovuto modificare "leggiEstensione" 
+    //e "collegamentoCartella" per correggere.
     public String leggiEstensione(String nomeFile, List<String> estensioni) {
         for (String estensione : estensioni) {
-            if (collegamentoCartella(nomeFile, estensione)) {
+            String nomeFileCompleto = nomeFile + "." +estensione;                
+            if (collegamentoCartella(nomeFileCompleto)) {
                 return estensione;
             } else {
+                if(collegamentoCartella(nomeFile)){
+                    return ".null";
+                }
                 continue;
             }
         }
-        return ".null";
+        return ".notfound";
     }
+    //LETTURA FINALE DEL FILE
     public void letturaFile(String estensione) {
         try (BufferedReader lettoreFile = new BufferedReader(
                 new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
             out.println("OK FILE");
-            String testoDaStampareEstensione = convertiEstensione(estensione);
-            out.println(testoDaStampareEstensione);
+            out.println(convertiEstensione(estensione));
             out.println(); // Riga vuota
             spazio = false;
 
@@ -137,17 +141,18 @@ public class ClientThread extends Thread {
             out.println("ERR READ");
         }
     }
+    //CONVERSIONE STAMPA DELL'ESTENSIONE
     public String convertiEstensione(String estensione){
         for (String[] tmp : TIPI) {
             if(estensione.equals(tmp[0])){
-                String testoDaStampareEstensione = "Content-Type: "+ tmp[1];
-                return testoDaStampareEstensione;
+                return "Content-Type: "+ tmp[1];
             }else {
                 continue;
             }
         }
         return "ERR TYPE";
     }
+    //TERMINARE LA CONNESSIONE
     public void terminaConnessione() {
         try {
             s.close();
