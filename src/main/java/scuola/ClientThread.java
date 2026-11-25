@@ -9,6 +9,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -85,7 +86,10 @@ public class ClientThread extends Thread {
             System.out.println(nomeFile);
 
             //STAMPA RISULTATO
-            letturaFile(estensione);
+            byte[] dati = Files.readAllBytes(file.toPath());
+            String contenuto = new String(dati, StandardCharsets.UTF_8);
+            Object[] datiContenuto = {dati.length, contenuto};
+            letturaFile(estensione,datiContenuto);
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -125,18 +129,17 @@ public class ClientThread extends Thread {
         return ".notfound";
     }
     //LETTURA FINALE DEL FILE
-    public void letturaFile(String estensione) {
+    public void letturaFile(String estensione, Object[] datiContenuto) {
         try (BufferedReader lettoreFile = new BufferedReader(
                 new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
             out.println("OK FILE");
-            out.println(convertiEstensione(estensione));
+            out.println("Content-Type: "+convertiEstensione(estensione));
+            out.println("Content-Lenght: "+datiContenuto[0]);
             out.println(); // Riga vuota
             spazio = false;
 
-            String riga;
-            while ((riga = lettoreFile.readLine()) != null) {
-                out.println(riga);
-            }
+            out.print(datiContenuto[1]);
+            out.flush();
         } catch (IOException e) {
             out.println("ERR READ");
         }
@@ -145,7 +148,7 @@ public class ClientThread extends Thread {
     public String convertiEstensione(String estensione){
         for (String[] tmp : TIPI) {
             if(estensione.equals(tmp[0])){
-                return "Content-Type: "+ tmp[1];
+                return tmp[1];
             }else {
                 continue;
             }
